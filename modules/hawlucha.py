@@ -6,6 +6,8 @@ from tkinter import ttk
 import webbrowser
 from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk  # for icons
+import json
+from collections import defaultdict
 
 keywords = [
     "username", "user", "userid", "user_id", "user_name", "login", "login_id",
@@ -47,6 +49,124 @@ valid_extensions = {
         '.properties', '.plist', '.cfg'
     }
 
+def scope_view(json_file):
+    include_dict, exclude_dict = parse_json(json_file)
+    output = format_output(include_dict, exclude_dict)
+    print(output)
+
+def parse_json(file_path):
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+
+    include_dict = defaultdict(list)
+    exclude_dict = defaultdict(list)
+
+    # Helper function to clean host and file path, remove special characters
+    def clean_host_file(item):
+        host = re.sub(r'\\', '', item.get('host', '')).replace('^', '').replace('$', '')
+        file_path = re.sub(r'\\', '', item.get('file', '')).replace('^', '').replace('$', '')
+
+        # Replace ".*" with "/*" in file paths for more universal path handling
+        file_path = file_path.replace('.*', '/*')
+
+        # Handle wildcard hosts (e.g. "^.+\\.example\\.com$" -> "*.example.com")
+        if host.startswith('.+'):
+            host = f"*.{host[3:]}"
+        
+        return host, file_path
+
+    # Process the include list
+    for item in data.get('target', {}).get('scope', {}).get('include', []):
+        if item.get('enabled', False):  # Safely check for 'enabled' field
+            host, file_path = clean_host_file(item)
+            include_dict[host].append(file_path)
+
+    # Process the exclude list
+    for item in data.get('target', {}).get('scope', {}).get('exclude', []):
+        if item.get('enabled', False):
+            host, file_path = clean_host_file(item)
+            exclude_dict[host].append(file_path)
+
+    return include_dict, exclude_dict
+
+def normalize_path(path):
+    """
+    Normalizes paths by ensuring they either always have or always don't have a trailing '/*'.
+    In this case, we will standardize paths by ensuring they end with '/*'.
+    """
+    if not path.endswith('/*'):
+        return path.rstrip('/') + '/*'
+    return path
+
+def domain_without_wildcard(domain):
+    """
+    Given a domain like *.example.com, return the non-wildcard version (example.com).
+    If the domain is already non-wildcard, return it as is.
+    """
+    if domain.startswith('*.'):
+        return domain[2:]
+    return domain
+
+def format_output(include_dict, exclude_dict):
+    output_lines = []
+    seen_paths = set()  # To keep track of already printed paths
+    wildcard_domains = set()  # To keep track of wildcard domains (e.g. *.domain.com)
+
+    # Helper function to clean double slashes and check for duplicates
+    def clean_and_add(domain, path, color_code):
+        # Normalize the path by ensuring it ends with '/*' for consistency
+        normalized_path = normalize_path(path)
+        
+        # Construct the full domain + path
+        full_path = f"{domain}{normalized_path}"
+        
+        # Replace double slashes with single slashes
+        cleaned_path = re.sub(r'//+', '/', full_path)
+
+        # Check if the path was already printed (based on normalized form)
+        if cleaned_path not in seen_paths:
+            seen_paths.add(cleaned_path)  # Mark this path as printed
+            output_lines.append(f"{color_code}{cleaned_path}\033[0m")
+
+    # Process include dict (green paths)
+    for domain in sorted(include_dict):
+        # Check if the domain is a wildcard (e.g., *.domain.com)
+        if domain.startswith('*.'):
+            wildcard_domains.add(domain_without_wildcard(domain))
+
+        for path in sorted(include_dict[domain]):
+            # If we have both the wildcard and non-wildcard version, skip the non-wildcard
+            base_domain = domain_without_wildcard(domain)
+            if base_domain in wildcard_domains and not domain.startswith('*.'):
+                continue  # Skip adding non-wildcard if wildcard exists
+            
+            clean_and_add(domain, path, "\033[92m")  # Green for include
+
+    # Process exclude dict (red paths)
+    for domain in sorted(exclude_dict):
+        for path in sorted(exclude_dict[domain]):
+            normalized_exclude_path = normalize_path(path)
+            if domain not in include_dict or normalized_exclude_path not in [normalize_path(p) for p in include_dict[domain]]:
+                clean_and_add(domain, path, "\033[91m")  # Red for exclude
+
+    return "\n".join(output_lines)
+
+def guess_params(urls_to_process):
+    """
+    Function used to find guessable(numeric) parameters values on URLs
+    """
+    guess_urls = set()
+    priority2 = set()
+    priority1 = set()
+    for url in urls_to_process:
+        if any(char.isdigit() for char in url):
+            guess_urls.add(url)
+        else:
+            continue
+
+    display_treeview(priority1, priority2, guess_urls)
+
+
 def ext_keyword_check(urls_to_process):
     """
     Function used to find keywords, extensions and filename in URLs
@@ -54,6 +174,7 @@ def ext_keyword_check(urls_to_process):
     names = set()
     priority2 = set()
     priority1 = set()
+    guess_urls = set()
     global valid_extensions, keywords
 
     for extension in valid_extensions:
@@ -81,7 +202,7 @@ def ext_keyword_check(urls_to_process):
             priority1.add(item)
             #print(f"{Fore.YELLOW}{item}\n")
 
-    display_treeview(priority1, priority2)
+    display_treeview(priority1, priority2, guess_urls)
 
 # Function to handle URL click event and open in browser
 def open_url(event):
@@ -101,11 +222,21 @@ def load_icons():
     }
     return icons
 
+def has_tag(item_id, tag):
+    return tag in tree.item(item_id, "tags")
+
 # Function to display Treeview with separate priority sections
-def display_treeview(priority1, priority2):
+def display_treeview(priority1, priority2, guess_urls, both=False):
+    """
+    Function to display Treeview with separate priority sections
+    priority1: priority 1 urls(keywords)
+    priority2: priority 2 urls(extensions)
+    guess_urls: urls with guessable(numeric) parameters
+    both: boolean parameter to instruct if perform both displays or only 1
+    """
     global tree
     root = tk.Tk()
-    root.title("Filtered URLs by Priority")
+    root.title("Filtered URLs")
     root.geometry("800x500")
 
     #load icons
@@ -117,7 +248,7 @@ def display_treeview(priority1, priority2):
     tree.heading("URL", text="Filtered URLs")
 
     # Adjust column width based on longest URL
-    max_url_length = max(len(url[0]) for url in priority1.union(priority2))
+    max_url_length = 1000
     url_column_width = min(max(300, max_url_length * 7), 700)  # limit max width to 700
     tree.column("URL", width=url_column_width, anchor="w")
     tree.column("Extension", width=100, anchor="center")
@@ -137,14 +268,31 @@ def display_treeview(priority1, priority2):
             path = urlparse(url).path
             ext = '.' + path.split('.')[-1] if '.' in path else '.html'
             tree.insert("", tk.END, values=(ext, url), image=icons["priority2"], tags=("priority2",))
+    if guess_urls:
+        tree.insert("", tk.END, values=("", "=== POSSIBLY GUESSABLE URLs(nums) ==="), tags=("header"))
+        for url in guess_urls:
+            path = urlparse(url).path
+            ext = '.' + path.split('.')[-1] if '.' in path else '.html'
+            tree.insert("", tk.END, values=(ext, url), image=icons["priority2"], tags=("guessable urls",))
+
 
     # Add style for headers and other rows
     style = ttk.Style(root)
     style.configure("Treeview.Heading", font=("Helvetica", 12, "bold"))
     style.configure("Treeview", rowheight=25)
     tree.tag_configure("header", font=("Helvetica", 10, "bold"), foreground="blue")
-    tree.tag_configure("priority1", background="orange", foreground='black')
-    tree.tag_configure("priority2", background="yellow", foreground='black')
+    
+    if both:
+            tree.tag_configure("priority1", background="orange", foreground='black')
+            tree.tag_configure("priority2", background="yellow", foreground='black')
+            tree.tag_configure("guessable urls", background="turquoise1", foreground='black')
+    else:
+        if has_tag(tree.get_children()[1], "priority1") and has_tag(tree.get_children()[2], "priority2"):
+            tree.tag_configure("priority1", background="orange", foreground='black')
+            tree.tag_configure("priority2", background="yellow", foreground='black')
+        elif has_tag(tree.get_children()[3], "guessable urls"):
+            tree.tag_configure("guessable urls", background="turquoise1", foreground='black')
+        
     style.map("Treeview", background=[("selected", "darkred")], foreground=[("selected", "white")])
 
     # Attach Treeview and scrollbar to the Tkinter window
