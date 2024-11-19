@@ -14,6 +14,7 @@ from modules.pidgey import *
 import os
 from modules.hawlucha import *
 from modules.treecko import *
+from modules.gengar import *
 
 def goback(count):
 	count = count + 1
@@ -34,12 +35,15 @@ def signal_handler(sig, frame):
 """)
     print(banner)
     # Here you could also perform any necessary cleanup
+    rec_stop_event.set() # for the threads or async tasks
+    rec_timer_event.set()
     sys.exit(0)
 
 
 if __name__ == '__main__':
 	#Registering the signal handler
 	signal.signal(signal.SIGINT, signal_handler)
+	stop_event = False
 	init(autoreset=True) #initialize colorama colors
 	unique_urls = set()  # Use a set to store unique URLs across scans
 	scope_urls = set() # set used to track the target scope(if provided)
@@ -74,7 +78,7 @@ if __name__ == '__main__':
 		print("4. Print the tree view of the target/targets URL(usefull for small sites)")
 		print("5. Save the results into master.json")
 		print("6. Check for uniqueness in the master.json file(useful when master.json is not empty)")
-		print("7. Parse the info disclosures results from module 1(useful to avoid false positives)")
+		print("7. Smartly view the results")
 		print("8. Exit")
 		if len(unique_urls) != 0:
 			print(f"{Fore.GREEN}Results sucessfully saved!")
@@ -227,11 +231,19 @@ if __name__ == '__main__':
 			elif second_choice == "2":
 				url = input(f"{Fore.YELLOW}Please enter the root URL or the file containing the root URLs of the site you want to analyze: ")
 				max_depth = input(f"{Fore.YELLOW}Please enter the maxiumum depth level of recursion or press enter to leave empty: ")
-				if len(max_depth) == 0:
-					max_depth = -1 
+				if not max_depth:
+					max_depth = -1
 				skip = input(f"{Fore.YELLOW}Press s to skip URL validation or enter to validate URLs: ")
-				header = input(f"{Fore.YELLOW}Please enter one custom header(if any): ")
 				print(f"{Fore.YELLOW} Example -> Cookie: PHPSession=1234567890")
+				header = input(f"{Fore.YELLOW}Please enter one custom header(if any): ")
+				if not header:
+					header = "User-Agent: WEBPOK"
+				timeout = input(f"{Fore.YELLOW}Please enter the timeout value in seconds(default=10s): ")
+				if not timeout:
+					timeout = int(10)
+				max_req_num = input(f"{Fore.YELLOW}Please enter the maxiumum paralel requests number(default 1): ")
+				if not max_req_num:
+					max_req_num = int(1)
 				start_urls = set()
 				if '://' not in url:
 					try:
@@ -244,8 +256,9 @@ if __name__ == '__main__':
 						traceback.print_exc()
 				else:
 					start_urls.add(url)
-				result = recursive_parsing(start_urls, thread_num, scope_urls, int(max_depth), skip, header)
-				unique_urls.update(result)
+				result = pidgey_recurse(start_urls, scope_urls, int(max_depth), header, int(timeout), int(max_req_num), skip)
+				for i in result:
+					unique_urls.update(i)
 			
 			elif second_choice == "6":
 				count = goback(count)
@@ -255,20 +268,65 @@ if __name__ == '__main__':
 			#deep scan
 			banner = (f"""{Fore.MAGENTA}
 
- ██████╗ ██╗  ██╗ █████╗ ███████╗████████╗██╗  ██╗   ██╗    ██╗    ██╗██╗  ██╗██╗███████╗██████╗ ███████╗██████╗ ███████╗
-██╔════╝ ██║  ██║██╔══██╗██╔════╝╚══██╔══╝██║  ╚██╗ ██╔╝    ██║    ██║██║  ██║██║██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝
-██║  ███╗███████║███████║███████╗   ██║   ██║   ╚████╔╝     ██║ █╗ ██║███████║██║███████╗██████╔╝█████╗  ██████╔╝███████╗
-██║   ██║██╔══██║██╔══██║╚════██║   ██║   ██║    ╚██╔╝      ██║███╗██║██╔══██║██║╚════██║██╔═══╝ ██╔══╝  ██╔══██╗╚════██║
-╚██████╔╝██║  ██║██║  ██║███████║   ██║   ███████╗██║       ╚███╔███╔╝██║  ██║██║███████║██║     ███████╗██║  ██║███████║
- ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝╚═╝        ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝
-       Mode 3: Hidden web discovery mode | Development
-       Looking in the shadows...                                                                                                               
+ ██████╗ ███████╗███╗   ██╗ ██████╗  █████╗ ██████╗     ███████╗██╗  ██╗ █████╗ ██████╗  ██████╗ ██╗    ██╗███████╗
+██╔════╝ ██╔════╝████╗  ██║██╔════╝ ██╔══██╗██╔══██╗    ██╔════╝██║  ██║██╔══██╗██╔══██╗██╔═══██╗██║    ██║██╔════╝
+██║  ███╗█████╗  ██╔██╗ ██║██║  ███╗███████║██████╔╝    ███████╗███████║███████║██║  ██║██║   ██║██║ █╗ ██║███████╗
+██║   ██║██╔══╝  ██║╚██╗██║██║   ██║██╔══██║██╔══██╗    ╚════██║██╔══██║██╔══██║██║  ██║██║   ██║██║███╗██║╚════██║
+╚██████╔╝███████╗██║ ╚████║╚██████╔╝██║  ██║██║  ██║    ███████║██║  ██║██║  ██║██████╔╝╚██████╔╝╚███╔███╔╝███████║
+ ╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝    ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝
+	   
+	Mode 3: Hidden web discovery mode | Development
+    Looking in the shadows...                                                                                                               
 
 """)
 			print(banner)
-			print("1. Recursive fuzzer")
+			print("1. Recursive fuzzer(only 1 URL at a time)")
 			print("2. Fetch known URLs from internet archives")
-			continue
+			print("3. Go back")
+			gengar_input = input("Please enter the input you would like to use: ")
+			if gengar_input == "1":
+				gengar_url = input("Please enter the base URL or enter to use the scope: ")
+				if not gengar_url:
+					if not len(scope_urls) > 1:
+						gengar_url = list(scope_urls)[0]
+					else:
+						print(f"{Fore.RED} The scope contains more than 1 URL!")
+						count = goback()
+				gengar_wd = input("Please enter the full path of the wordlist you would like to use: ")
+				input_ext = input("Please enter the extensions you would like to use(comma-separated): ")
+				if input_ext:
+					gengar_ext = set()
+					input_ext = [item.strip() for item in input_ext.split(',')]
+					for ext in input_ext:
+						if not ext.startswith('.'):
+							ext = '.' + ext
+							gengar_ext.add(ext)
+						else:
+							continue
+
+				else:
+					gengar_ext = set()
+				gengar_max_req_num = input("Please enter the maxiumum paralel requests number(default 1): ")
+				if not gengar_max_req_num:
+					gengar_max_req_num = 1
+				gengar_timeout = input("Please enter the timeout for the requests in seconds (default 10s): ")
+				if not gengar_timeout:
+					gengar_timeout = 10
+				print("Example -> Cookie: PHPSession=1234567890")
+				gengar_headers = input("Please enter the custom header you would like to use: ")
+				rec_fuzz(gengar_url, gengar_wd, gengar_ext, gengar_max_req_num, gengar_timeout, gengar_headers, thread_num)			
+			
+			elif gengar_input == "2":
+				gengar_host = input("Please enter the host you would like to search for or enter to use the scope: ")
+				if gengar_host:
+					gau(gengar_host)
+				else:
+					for gengar_url in scope_urls:
+						gau(gengar_url)
+
+			elif gengar_input == "3":
+				count = goback(count)
+
 		elif int(main_choice) == 4:
 			banner = (f"""{Fore.GREEN}
 
@@ -359,40 +417,68 @@ if __name__ == '__main__':
 ██╔══██║██╔══██║██║███╗██║██║     ██║   ██║██║     ██╔══██║██╔══██║    ╚════██║██║██║   ██║██╔══██║   ██║   
 ██║  ██║██║  ██║╚███╔███╔╝███████╗╚██████╔╝╚██████╗██║  ██║██║  ██║    ███████║██║╚██████╔╝██║  ██║   ██║   
 ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝    ╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   
-        Mode 7: Smartly view the results from module 1
-        An Unmatched Vision for Strategic Mastery                                                                                                    
+    Mode 7: View the results smartly
+    An Unmatched Vision for Strategic Mastery                                                                                                    
 
 """)
 			print(banner)
 			print("1. Extension and keywords check on URLs")
 			print("2. Find guessable parameters in URLs")
-			print("3. Go back")
+			print("3. Parse a Burp-comptabile JSON scope file")
+			print("4. Go back")
 			hawlucha_input = input("Please enter the option you would like to use: ")
-			inputfile = input("Please enter the file containing the results to analyze or press enter to analyze all the saved results file: ")
+			inputfile = input("Please enter the file containing the results to analyze, or press enter to analyze all the saved results file, or m for master.json:  ")
 			urls_to_process = set()
 			urls_to_process.clear()
-			if not inputfile:
-				inputfiles = ['snorlax_result.txt', 'pidgey_results.txt', 'pidgey_results_sensitive.txt']
-				for file in inputfiles:
-					if os.path.exists(file):
+			if hawlucha_input != 3:
+				if not inputfile:
+					inputfiles = ['snorlax_result.txt', 'pidgey_results.txt', 'pidgey_results_sensitive.txt']
+					for file in inputfiles:
+						if os.path.exists(file):
+							try:
+								with open(file, 'r') as file:
+									lines = file.readlines()
+									for line in lines:
+										line = line.rstrip()
+										urls_to_process.add(line)
+							except:
+								print_exc.traceback()
+						else:
+							print(f"{Fore.RED}File {file} not found!")
+				elif inputfile == "m":
+					try:
+						with open("master.json", 'r') as file:
+							urls = json.load(file)
+							for url in urls:
+								url = url.rstrip()
+								urls_to_process.add(url)
+					except:
+						traceback.print_exc()
+
+				else:
+					if os.path.exists(inputfile):
 						try:
-							with open(file, 'r') as file:
+							with open(inputfile, 'r') as file:
 								lines = file.readlines()
 								for line in lines:
 									line = line.rstrip()
 									urls_to_process.add(line)
 						except:
-							print_exc.traceback()
+							traceback.print_exc()
 					else:
 						print(f"{Fore.RED}File {file} not found!")
-			
+
 			if hawlucha_input == "1":
 				ext_keyword_check(urls_to_process)
 
 			elif hawlucha_input == "2":
-				sys.exit(1)
+				guess_params(urls_to_process)
 
 			elif hawlucha_input == "3":
+				jsonfile = input("Please enter the Burp-comptabile JSON scope file: ")
+				scope_view(jsonfile)
+
+			elif hawlucha_input == "4":
 				count = goback(count)
 			else:
 				print(f"{Fore.RED}You must enter a valid option!")
