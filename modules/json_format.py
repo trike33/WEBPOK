@@ -4,13 +4,6 @@ from urllib.parse import urlparse
 import os
 from colorama import Fore, Style
 
-def writejson(unique_urls, output_file='master.json'):
-    # Write the unique URLs to a JSON file
-    with open(output_file, 'w') as json_file:
-        json.dump(list(unique_urls), json_file, indent=4)
-        file.close()
-    print(f"Stored {len(unique_urls)} unique URLs in {output_file}.")
-
 def write_to_json(url_set, file_name):
     """Saves a set of URLs to a JSON file by converting it to a list."""
     with open(file_name, 'a') as file:
