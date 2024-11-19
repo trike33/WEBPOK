@@ -57,7 +57,7 @@ def validate_urls(result, url, idx, progress_bar, start_time, total_urls, lock):
 total_requests = 0
 new_urls_count = 0
 
-def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progress_bar, start_time, custom_header, lock):
+async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progress_bar, session, semaphore):
 	"""
 	Gathers links from HTML files
 	url: url to check
@@ -66,10 +66,8 @@ def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progress_ba
 	new_urls: set used to keep track of the newly discovered URLs at this depth(only our current depth)
 	scope: set or string used to keep the tool in scope
 	progress_bar: used to update the progress bar
-	idx: used to keep track of the requests done
-	start_time: variable used to keep track of the depth check start time
-	custom_header: custom header mainly used for authentication
-	lock: variable used to keep a safe thread environment
+	session: aiohttp session
+	semaphore used to limit http requests
 	"""
 	global total_requests, new_urls_count
 
@@ -78,74 +76,81 @@ def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progress_ba
 
 	visited_urls.add(url)
 	parsed_url = urlparse(url)
-	
+
 	#scope check
-
-	"""
-	for i in scope:
-		scope_url = urlparse(i)
-		if len(scope_url.path) < 1: # no path
-			if parsed_url.scheme+"://"+parsed_url.netloc not in scope:
-				return 
-		else:
-			if parsed_url.netloc in scope:
-				if parsed_url.path.count("/") < scope_url.path.count("/"):
-					return
-			else:
-				return"""
 	if scope_check(scope, parsed_url):
-		try:
-			if len(custom_header) != 0:
-				response = requests.get(url=url, verify=False, timeout=10, headers=custom_header)
-			else:
-				response = requests.get(url=url, verify=False, timeout=10)
+		async with semaphore:
+			try:
+				start_time = time.time()
+				async with session.get(url, ssl=False) as response:
+					content = await response.text()
 
-			# 1. Full URL regex pattern
-			full_url_pattern = r'https?://[^\s"\'<>]+'
-			match1 = re.findall(full_url_pattern, response.text)
+					elapsed_time = time.time() - start_time
+					if elapsed_time > 0:
+						rps = 1 / elapsed_time
+					else:
+						rps = 0
 
-			# 2. Relative URL regex pattern
-			relative_url_pattern = r'(?:href|src|action|data-[\w-]+)\s*=\s*["\']((?:\./|\../|/)[^"\'>?#]*)["\']'
-			match2 = re.findall(relative_url_pattern, response.text)
+					# 1. Full URL regex pattern
+					full_url_pattern = r'https?://[^\s"\'<>]+'
+					match1 = re.findall(full_url_pattern, content)
 
-			# 3. Concatenated URL regex pattern (within JavaScript)
-			#concat_url_pattern = r'["\'](https?://|/)[^"\']*["\']\s*\+\s*["\'][^"\']*["\']'
-			#match3 = re.findall(concat_url_pattern, response.text)
+					# 2. Relative URL regex pattern
+					relative_url_pattern = r'(?:href|src|action|data-[\w-]+)\s*=\s*["\']((?:\./|\../|/)[^"\'>?#]*)["\']'
+					match2 = re.findall(relative_url_pattern, content)
 
-			if match1:
-				#Full URLs
-				for match in match1:
-					parsed_match = urlparse(match)
-					if scope_check(scope, parsed_match):
-						urls_to_check.add(match)
-						new_urls.add(match)
-						new_urls_count += 1
+					# 3, HTML attributes regex pattern
+					pattern = r'\b(?:href|src|action|data-\w+)="([^"]*)"'
+					match3 = re.findall(pattern, content)
 
-			if match2:
-				#Relative URLs
-				for match in match2:
-					parsed_url = urlparse(response.url)
-					full_url = parsed_url.scheme+"://"+parsed_url.netloc+parsed_url.path+match
-					parsed_full_url = urlparse(full_url)
-					if scope_check(scope, parsed_full_url):
-						urls_to_check.add(full_url)
-						new_urls.add(full_url)
-						new_urls_count += 1
+					# 3. Concatenated URL regex pattern (within JavaScript)
+					#concat_url_pattern = r'["\'](https?://|/)[^"\']*["\']\s*\+\s*["\'][^"\']*["\']'
+					#match3 = re.findall(concat_url_pattern, response.text)
 
-			#if match3:
-				#Concat URLs
+					if match1:
+						#Full URLs
+						for match in match1:
+							parsed_match = urlparse(match)
+							if scope_check(scope, parsed_match):
+								urls_to_check.add(match)
+								new_urls.add(match)
+								new_urls_count += 1
 
-			#Update the progress bar
-			total_requests += 1  # Increment total requests
+					if match2:
+						#Relative URLs
+						for match in match2:
+							parsed_url = urlparse(response.url)
+							if parsed_url.path[0] != "/":
+								full_url = parsed_url.scheme+"://"+parsed_url.netloc+parsed_url.path+"/"+match
+							else:
+								full_url = parsed_url.scheme+"://"+parsed_url.netloc+parsed_url.path+match
+							parsed_full_url = urlparse(full_url)
+							if scope_check(scope, parsed_full_url):
+								urls_to_check.add(full_url)
+								new_urls.add(full_url)
+								new_urls_count += 1
 
-			elapsed_time = time.time() - start_time
-			if elapsed_time > 0:
-				rps = total_requests / elapsed_time
-			else:
-				rps = 0
-			progress_bar.status(f"Processed Requests: {total_requests} | New URLs found: {len(urls_to_check)} | RPS: {rps:.2f}")
+					if match3:
+						#HTML attributes URL
+						for link in match3:
+							if 'http' not in link: #relative path
+								if link[0] != "/":
+									full_link = url+'/'+link
+								else:
+									full_link = url+link
+								new_urls.add(full_link)
+								urls_to_check.add(full_link)
+							else: # full path
+								new_urls.add(link)
+								urls_to_check.add(link)
+						
 
-		except Exception as e:
-			print(f"Error processing {url}: {e}")
+					#Update the progress bar
+					total_requests += 1  # Increment total requests
+
+					progress_bar.status(f"Processed Requests: {total_requests} | New URLs found: {len(urls_to_check)} | RPS: {rps:.2f}")
+
+			except Exception as e:
+				print(f"Error processing {url}: {e}")
 	else:
 		return
