@@ -2,6 +2,7 @@ import requests
 import time
 from urllib.parse import urlparse, urljoin, urlunparse
 import re
+import traceback
 
 def scope_check(scope, parsed_url):
 	"""
@@ -119,7 +120,7 @@ async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progr
 					if match2:
 						#Relative URLs
 						for match in match2:
-							parsed_url = urlparse(response.url)
+							parsed_url = urlparse(url)
 							if parsed_url.path[0] != "/":
 								full_url = parsed_url.scheme+"://"+parsed_url.netloc+parsed_url.path+"/"+match
 							else:
@@ -151,6 +152,7 @@ async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progr
 					progress_bar.status(f"Processed Requests: {total_requests} | New URLs found: {len(urls_to_check)} | RPS: {rps:.2f}")
 
 			except Exception as e:
+				#traceback.print_exc()
 				print(f"Error processing {url}: {e}")
 	else:
 		return
