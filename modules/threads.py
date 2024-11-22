@@ -84,7 +84,17 @@ async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progr
 			try:
 				start_time = time.time()
 				async with session.get(url, ssl=False) as response:
-					content = await response.text()
+					content_type = response.headers.get('Content-Type', '')
+					
+					#ensure we only parse html or js files
+					if "html" or "javascript" in content_type:
+						try:
+							content = await response.text()
+						except:
+							await response.read()
+							return
+					else:
+						return
 
 					elapsed_time = time.time() - start_time
 					if elapsed_time > 0:
