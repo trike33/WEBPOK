@@ -24,7 +24,7 @@ The purpouse of this module is to help you discover all the pages that the devel
 
 *Crawling:*
 
-What is most interesting about this module is that it lets you <ins>crawl</ins> with asynchronous requests and <ins>without a web browser</ins>, which makes it ideal for systems with very low hardware resources. In order to accomplish this task it uses regular expresions to get full and relative URLs patterns. However, the main counter part of this feature is that can be quite slow on large websites even though you use many paralel requests.
+What is most interesting about this module is that it lets you <ins>crawl</ins> with asynchronous requests and <ins>without a web browser</ins>, which makes it ideal for systems with very low hardware resources and to <ins>crawl static websites</ins>. In order to accomplish this task it uses regular expresions to get full and relative URLs patterns. However, the main counter part of this feature is that can be quite slow on large websites even though you use many paralel requests.
 
 Once a full URL set has been constructed via crawling, it lets you check if the URLs found are valid or not.
 
