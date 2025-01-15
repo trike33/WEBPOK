@@ -48,7 +48,7 @@ Some icons have been placed strategically in order to facilitate the visual orga
 - Leaf: Directory
 - Treecko: Endpoint
 
-Please note that this processing can take a while if the master.json contains a huge amount of URLs. 
+Please note that this processing can take a while if the `master.json` contains a huge amount of URLs. 
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/treecko.png)
 
