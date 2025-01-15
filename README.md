@@ -40,7 +40,13 @@ __implement a check avoid writting duplicate urls to pidgey results file or to r
 
 ### Mode 4: Treecko Roots
 
+This module organizes all the URLs stored inside the `master.json` file and it prints them to a window from which you can expand and collapse directories to get a quick overview of the target. Another interesing functionality about this module is that it displays the full URL at the bottom, so you can copy-paste it easily. Additionally all the boxes are clickable, meaning that if you double click one, it will automatically that URL in a web browser.
+
+Please note that this processing can take a while if the master.json contains a huge amount of URLs. 
+
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/treecko.png)
+
+![](https://github.com/trike33/WEBPOK/blob/main/repo_images/treecko%20tree.png)
 
 ### Mode 5: Pikachu Vault
 
