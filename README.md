@@ -30,6 +30,8 @@ What is most interesting about this module is that it lets you <ins>crawl</ins> 
 
 Once a full URL set has been constructed via crawling, it lets you check if the URLs found are valid or not.
 
+__implement a check avoid writting duplicate urls to pidgey results file or to remove duplicates once the crawler has ended__
+
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/crawler.png)
 
 ### Mode 3: Gengar Shadows
