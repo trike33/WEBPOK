@@ -42,6 +42,12 @@ __implement a check avoid writting duplicate urls to pidgey results file or to r
 
 This module organizes all the URLs stored inside the `master.json` file and it prints them to a window from which you can expand and collapse directories to get a quick overview of the target. Another interesing functionality about this module is that it displays the full URL on the left-side, so you easily know its full route. Additionally all the boxes are clickable, meaning that if you double click one, it will automatically that URL in a web browser.
 
+Some icons have been placed strategically in order to facilitate the visual organization, their meanings are the following:
+
+- Flower: Domain
+- Leaf: Directory
+- Treecko: Endpoint
+
 Please note that this processing can take a while if the master.json contains a huge amount of URLs. 
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/treecko.png)
