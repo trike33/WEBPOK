@@ -95,3 +95,28 @@ This helper module will check for duplicates into the `master.json` file(please 
 The aim of this last mode is to smartly view the results files contents. It includes a variety of functionalities such as; finding sensitve extensions and/or keywords on URLs, find guessable parameters in the URLS and parse a Burp-compatible JSON scope file.
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/hawlucha.png)
+
+## ⚠️ Disclaimer
+
+This tool is intended solely for research and educational purposes. The author does not assume any responsibility for improper or illegal use of this software.
+
+Users are fully responsible for ensuring that they have the necessary authorization before conducting any tests on a system. Unauthorized use of this tool may violate applicable laws and regulations.
+
+By using this software, you agree that the author shall not be held liable for any misuse, damages, or legal consequences resulting from its use.This tool is intended solely for research and educational purposes. The author does not assume any responsibility for improper or illegal use of this software.
+
+Users are fully responsible for ensuring that they have the necessary authorization before conducting any tests on a system. Unauthorized use of this tool may violate applicable laws and regulations.
+
+By using this software, you agree that the author shall not be held liable for any misuse, damages, or legal consequences resulting from its use.
+
+## 🤝 Support
+
+This project is maintained as a personal research and development effort. While I welcome and review pull requests, I do not provide official support for issues or troubleshooting.
+
+If you would like to contribute improvements, feel free to submit a pull request, but please ensure that:
+
+    Your changes are well-documented and tested.
+    The code follows the existing structure and best practices.
+
+If you find this project useful, consider starring the repository ⭐ to show your support and help others discover it!
+
+I appreciate any contributions that help improve WEBPOK! 🚀
