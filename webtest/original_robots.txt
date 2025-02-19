@@ -1,0 +1,8 @@
+User-agent: googlebot
+Disallow: /test1.html
+
+User-agent: BingBot
+Disallow: /dir1/test1.html
+
+Sitemap: http://localhost/robots2.txt
+

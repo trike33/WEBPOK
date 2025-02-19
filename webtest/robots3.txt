@@ -1,0 +1,2 @@
+UserAgent: snorlax
+Disallow: /dir2/test1.html

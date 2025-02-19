@@ -1,0 +1,3 @@
+Allow: /dir1/subdir1/test1.html
+
+Sitemap: http://localhost/robots3.txt
