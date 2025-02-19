@@ -1,16 +1,16 @@
 # WEBPOK
 
-Inner workings: Most the results(except for the crawling ones) are saved in memory inside a set, but with mode 4 you can save them to the master.json file and work later with them.
+Inner workings: Most the results(except for the crawling ones) are saved in memory inside a set, but with mode 4 you can save them to the `master.json` file and work later with them.
 
-If you do not want to test it out before using it, I've included a sample website which is the one that I used for testing and developing of WEBPOK. Please note that you will get better results if you run the website with: `sudo python3 -m http.server 80`, the port does not matter, but the directory listing for example, will help you get better intial results.
+If you do want to test it out before using it, I've included a sample website which is the one that I used for testing and developing of WEBPOK. Please note that you will get better results if you run the website with: `sudo python3 -m http.server 80`, the port does not matter, but the directory listing for example, will help you get better intial results.
 
-all of the async features currently include an await statement used for throttling but you can simply comment it out ;)
+All of the async features currently include an `await` statement of 2 seconds used for throttling but you can simply comment it out ;)
 
 ## Modules
 
 ### Module 1: Snorlax Snooze
 
-It is a module designed to search for sensitive information. This search is structured in 2 priority levels, ranging from 1(less important) to 2(most important). It is important to keep in mind that priority 1 can take a while to complete if it has a lot of URLs to check, its search if performed through regular expressions.
+It is a module designed to search for sensitive information. This search is structured in 2 priority levels, ranging from 1(less important) to 2(most important). It is important to keep in mind that priority 1 can take a while to complete if it has a lot of URLs to check, its search is performed through regular expressions.
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/snorlax.png)
 
@@ -30,13 +30,36 @@ What is most interesting about this module is that it lets you <ins>crawl</ins> 
 
 Once a full URL set has been constructed via crawling, it lets you check if the URLs found are valid or not.
 
-__implement a check avoid writting duplicate urls to pidgey results file or to remove duplicates once the crawler has ended__
-
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/crawler.png)
 
 ### Mode 3: Gengar Shadows
 
+The main objective of this module is to find all the URLs that are not intended to be public(but yet the website has). This module uses a variety of techniques to gather them, such as:
+
+- Directory brute-forcing with recursion
+- Checking the Wayback machine(http://web.archive.org/)
+- Find hidden input fields on HTML code
+- Brute force GET/POST parameters
+
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/gengar.png)
+
+**Recursive directory bruteforcing with or without extensions, with wordlist split**
+
+Ex. Consider a wordlist with 10 words:
+
+We don't start one captain that covers the whole wordlist(1 to 10)
+Instead we create various asynchronous tasks(called captains, say 2 or more) that divides the workload, such as:
+
+- Captain 1: Goes from 1 to 5
+- Captain 2: Goes from 6 to 10
+
+By doing this splitting we can cover more wordlist contents more faster, meaning it is great for fastly find weird or hidden URLs. Although you can still find all the website URLs(but it will be slower) due to its recursion strategy.
+
+In addition to this splitting strategy some optimization has been done so that each captain can run more than 1 paralel request, and they share a common results pool that they are constantly checking and updating with findings.
+
+Also, there are some simple matching and filtering patterns that will help streamline the results.
+
+![](https://github.com/trike33/WEBPOK/blob/main/repo_images/dirbrute.png)
 
 ### Mode 4: Treecko Roots
 
@@ -48,7 +71,7 @@ Some icons have been placed strategically in order to facilitate the visual orga
 - Leaf: Directory
 - Treecko: Endpoint
 
-Please note that this processing can take a while if the `master.json` contains a huge amount of URLs. 
+Please note that this processing can take a while if the `master.json` contains a large amount of URLs. 
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/treecko.png)
 
