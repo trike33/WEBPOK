@@ -61,7 +61,7 @@ new_urls_count = 0
 async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progress_bar, session, semaphore):
 	"""
 	Gathers links from HTML files
-	url: url to check
+	url_packs: url packs that we must make concurrently
 	visited_urls: set used to avoid infinite loops
 	urls_to_check: set used to keep track of the all the new unique urls(all depths)
 	new_urls: set used to keep track of the newly discovered URLs at this depth(only our current depth)
@@ -111,7 +111,7 @@ async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progr
 					match2 = re.findall(relative_url_pattern, content)
 
 					# 3, HTML attributes regex pattern
-					pattern = r'\b(?:href|src|action|data-\w+)="([^"]*)"'
+					pattern = r'\b(?:href|src-\w+)="([^"]*)"'
 					match3 = re.findall(pattern, content)
 
 					# 3. Concatenated URL regex pattern (within JavaScript)
@@ -144,16 +144,19 @@ async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progr
 					if match3:
 						#HTML attributes URL
 						for link in match3:
-							if 'http' not in link: #relative path
-								if link[0] != "/":
-									full_link = url+'/'+link
-								else:
-									full_link = url+link
-								new_urls.add(full_link)
-								urls_to_check.add(full_link)
-							else: # full path
-								new_urls.add(link)
-								urls_to_check.add(link)
+							if len(link) != 0:
+								if 'http' not in link: #relative path
+									if link[0] != "/":
+										full_link = url+'/'+link
+									else:
+										full_link = url+link
+									new_urls.add(full_link)
+									urls_to_check.add(full_link)
+								else: # full path
+									new_urls.add(link)
+									urls_to_check.add(link)
+							else:
+								continue
 						
 
 					#Update the progress bar
@@ -162,7 +165,7 @@ async def link_scraping(url, visited_urls, urls_to_check, new_urls, scope, progr
 					progress_bar.status(f"Processed Requests: {total_requests} | New URLs found: {len(urls_to_check)} | RPS: {rps:.2f}")
 
 			except Exception as e:
-				#traceback.print_exc()
 				print(f"Error processing {url}: {e}")
+				#traceback.print_exc()
 	else:
 		return
