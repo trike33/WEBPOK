@@ -524,8 +524,7 @@ if __name__ == '__main__':
 			print(f"{Style.BRIGHT}| 1. Extension and keywords check on URLs"+" "*(90-41+2)+"|")
 			print(f"{Style.BRIGHT}| 2. Find guessable parameters in URLs(numeric)"+" "*(90-38+2)+"|")
 			print(f"{Style.BRIGHT}| 3. Parse a Burp-comptabile JSON scope file"+" "*(90-44+2)+"|")
-			print(f"{Style.BRIGHT}| 4. Search for CVEs on the snyk website(free), by parsing HTML code"+" "*(90-68+2)+"|")
-			print(f"{Style.BRIGHT}| 5. Go back"+" "*(90-12+2)+"|")
+			print(f"{Style.BRIGHT}| 4. Go back"+" "*(90-12+2)+"|")
 			print(f"{Fore.RED}└" + "─" * 91 + "┘"+"\n")
 			hawlucha_input = input("Please enter the option you would like to use: ")
 			if hawlucha_input == "1":
@@ -540,9 +539,6 @@ if __name__ == '__main__':
 				scope_view(jsonfile)
 
 			elif hawlucha_input == "4":
-				snyk_check()
-
-			elif hawlucha_input == "5":
 				count = goback(count)
 			else:
 				print(f"{Fore.RED}You must enter a valid option!")
