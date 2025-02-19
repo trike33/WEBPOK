@@ -61,6 +61,7 @@ async def recursive_parsing(start_url, scope, max_depth, skip, header, timeout, 
 	sensitive_urls = set()
 	normal_urls = set()
 	custom_header = {}
+	written_urls = set()
 	if len(header) != 0:
 		key, value = header.split(":", 1)
 		custom_header[key.strip()] = value.strip()
@@ -78,18 +79,33 @@ async def recursive_parsing(start_url, scope, max_depth, skip, header, timeout, 
 	for url in start_url:
 		print(f"{Fore.YELLOW}Processing URL: {url}")
 		while True:
-			await asyncio.sleep(2) #used for throtelling 
+			await asyncio.sleep(2) #used for throtelling
+
+			temp_urls.clear()
+			for i in new_urls:
+				temp_urls.add(i)
+			new_urls.clear()
+
+			sensitive_urls.clear()
+			normal_urls.clear()
+
 			#write results to pidgey file
 			with open('pidgey_results.txt', 'a') as file:
 				for url_to_check in urls_to_check:
-					path = urlparse(url_to_check).path
-					extension = '.' + path.split('.')[-1] if '.' in path else ''
-					if extension in valid_extensions:
-						sensitive_urls.add(url_to_check)
+					if url_to_check not in written_urls:
+						path = urlparse(url_to_check).path
+						extension = '.' + path.split('.')[-1] if '.' in path else ''
+						if extension in valid_extensions:
+							sensitive_urls.add(url_to_check)
+							written_urls.add(url_to_check)
+						else:
+							normal_urls.add(url_to_check)
+							written_urls.add(url_to_check)
+							file.write(url_to_check+'\n')
 					else:
-						normal_urls.add(url_to_check)
-						file.write(url_to_check+'\n')
-			if len(normal_urls) > 10:
+						continue
+
+			if len(normal_urls) > 0:
 				print(f"{Fore.YELLOW}{len(normal_urls)} written to pidgey_results.txt file!")
 
 			#Write sensitive results to pidgey file
@@ -102,10 +118,6 @@ async def recursive_parsing(start_url, scope, max_depth, skip, header, timeout, 
 			if depth == max_depth:
 				print(f"{Fore.RED}Maximum depth reached at {depth}")
 				break
-			temp_urls.clear()
-			for i in new_urls:
-				temp_urls.add(i)
-			new_urls.clear()
 
 			print(f"{Fore.CYAN}Recursing at depth: {depth}")
 			if len(temp_urls) != 0:
@@ -119,6 +131,7 @@ async def recursive_parsing(start_url, scope, max_depth, skip, header, timeout, 
 
 				if len(new_urls) == 0:
 					break
+
 			print(f"{Fore.GREEN}Found {len(new_urls)} new URLs at depth: {depth}")
 			depth += 1
 
@@ -288,7 +301,7 @@ def parse_robots_url(url, thread_num, result):
 			except Exception as exc:
 				idx = futures[future]
 				print(f"Thread handling URL at index {idx} raised an exception: {exc}")
-	progress_bar.sucess()
+	progress_bar.success()
 	
 	return result
 
