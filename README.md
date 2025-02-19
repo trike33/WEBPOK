@@ -112,10 +112,7 @@ By using this software, you agree that the author shall not be held liable for a
 
 This project is maintained as a personal research and development effort. While I welcome and review pull requests, I do not provide official support for issues or troubleshooting.
 
-If you would like to contribute improvements, feel free to submit a pull request, but please ensure that:
-
-    Your changes are well-documented and tested.
-    The code follows the existing structure and best practices.
+If you would like to contribute improvements, feel free to submit a pull request and I will review it happily.
 
 If you find this project useful, consider starring the repository ⭐ to show your support and help others discover it!
 
