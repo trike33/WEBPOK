@@ -92,6 +92,6 @@ This helper module will check for duplicates into the `master.json` file(please 
 
 ### Mode 7: Hawlucha Sight
 
-The aim of this last mode is to smartly view the results files contents. It includes a variety of functionalities such as; finding sensitve extensions and/or keywords on URLs, find guessable parameters in the URLs, parse a Burp-compatible JSON scope file and a free CVE search on the snyk website.
+The aim of this last mode is to smartly view the results files contents. It includes a variety of functionalities such as; finding sensitve extensions and/or keywords on URLs, find guessable parameters in the URLS and parse a Burp-compatible JSON scope file.
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/hawlucha.png)
