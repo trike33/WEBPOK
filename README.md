@@ -1,4 +1,4 @@
-# WEBPOK
+# 🌐 WEBPOK
 
 Inner workings: Most the results(except for the crawling ones) are saved in memory inside a set, but with mode 4 you can save them to the `master.json` file and work later with them.
 
