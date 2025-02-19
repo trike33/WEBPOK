@@ -3,7 +3,7 @@
 ## ⚙️  Inner workings
 Most the results(except for the crawling ones) are saved in memory inside a set, but with mode 4 you can save them to the `master.json` file and work later with them.
 
-If you do want to test it out before using it, I've included a sample website which is the one that I used for testing and developing of WEBPOK. Please note that you will get better results if you run the website with: `sudo python3 -m http.server 80`, the port does not matter, but the directory listing for example, will help you get better intial results.
+If you do want to test it out before using it, I've included a sample website(under `/webtest`) and a sample wordlist(`wd`) which are the ones that I used for testing and development of WEBPOK. Please note that you will get better results if you run the website with: `sudo python3 -m http.server 80`, the port does not matter, but the directory listing for example, will help you get better intial results.
 
 All of the async features currently include an `await` statement of 2 seconds used for throttling but you can simply comment it out ;)
 
