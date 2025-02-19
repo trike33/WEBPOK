@@ -79,12 +79,18 @@ Please note that this processing can take a while if the `master.json` contains 
 
 ### Mode 5: Pikachu Vault
 
+With this module you can save your results stored in memory into the `master.json` file(please note that it can take a while if the master.json file is very large).
+
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/pikachu.png)
 
 ### Mode 6: Ditto Twins Check
 
+This helper module will check for duplicates into the `master.json` file(please note that it can take a while if the master.json file is very large).
+
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/ditto.png)
 
 ### Mode 7: Hawlucha Sight
+
+The aim of this last mode is to smartly view the results files contents. It includes a variety of functionalities such as; finding sensitve extensions and/or keywords on URLs, find guessable parameters in the URLs, parse a Burp-compatible JSON scope file and a free CVE search on the snyk website.
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/hawlucha.png)
