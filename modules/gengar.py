@@ -1,4 +1,4 @@
-import requests
+import requests as r
 import sys
 import json
 from pwn import *
@@ -12,6 +12,8 @@ import aiohttp
 import random
 from colorama import Fore, Style
 from modules.json_format import *
+from bs4 import BeautifulSoup
+from modules.helper import *
 
 gau_timer_event = False # for gau
 
@@ -20,6 +22,147 @@ rec_stop_event = threading.Event()
 rec_timer_event = threading.Event()
 visited_urls = set()
 valid_urls = set()
+
+async def fetch_get(session, url, params, semaphore):
+    async with semaphore:
+        async with session.get(url, params=params) as response:
+            return await response.text(), response.status
+
+async def fetch_post(session, url, params, semaphore):
+    async with semaphore:
+        async with session.post(url, data=params) as response:
+            return await response.text(), response.status
+
+async def param_get_bruteforce(url, wordlist, max_req_num, headers, timeout, testvalue):
+    semaphore = asyncio.Semaphore(max_req_num)
+    async with aiohttp.ClientSession(headers=headers) as session:
+        tasks = []
+        for param in wordlist:
+            params = {param: testvalue}
+            tasks.append(fetch_get(session, url, params, semaphore))
+        
+        responses = await asyncio.gather(*tasks)
+        return responses
+
+async def param_post_bruteforce(url, wordlist, max_req_num, headers, timeout, testvalue):
+    semaphore = asyncio.Semaphore(max_req_num)
+    async with aiohttp.ClientSession(headers=headers) as session:
+        tasks = []
+        for param in wordlist:
+            params = {param: testvalue}
+            tasks.append(fetch_post(session, url, params, semaphore))
+        
+        responses = await asyncio.gather(*tasks)
+        return responses
+
+def bruteforce_post_params(url, wordlist, max_req_num, headers, timeout, testvalue):
+    if len(headers) != 0:
+        key, value = header.split(":", 1)
+        custom_header[key.strip()] = value.strip()
+    else:
+        headers = {"User-Agent": "WEBPOK"}
+
+    if len(testvalue) != 0:
+        testvalue = testvalue
+    else:
+        testvalue = "test_value"
+
+    method = "POST"
+    calibraton_length = calibraton(url, headers, method)
+
+    print(f"{Fore.MAGENTA}\tBase URL >>> {url}")
+    print(f"{Fore.MAGENTA}\tWordlist >>> {wordlist}")
+    print(f"{Fore.MAGENTA}\tMaximum paralel requests >>> {max_req_num}")
+    print(f"{Fore.MAGENTA}\tHeaders >>> {headers}")
+    print(f"{Fore.MAGENTA}\tTimeout >>> {timeout}s")
+    print(f"{Fore.MAGENTA}\tTest value >>> {testvalue}")
+    print(f"{Fore.MAGENTA}\tMethod >>> {method}")
+    print(f"{Fore.MAGENTA}\tCalibration length >>> {calibraton_length}\n")
+
+    with open(wordlist, 'r') as file:
+        wordlist = [line.strip() for line in file.readlines()]
+    
+    start_time = time.time()
+    responses = asyncio.run(param_post_bruteforce(url, wordlist, max_req_num, headers, timeout, testvalue))
+    end_time = time.time()
+
+    for response, status in responses:
+        if len(response) != calibraton_length and status != 404:
+            print(f'Status: {status}, Response Length: {len(response)}')
+    
+    print(f'Time taken: {end_time - start_time} seconds')
+
+    input("Awaiting to return to main menu...")
+
+def bruteforce_get_params(url, wordlist, max_req_num, headers, timeout, testvalue):
+
+    if len(headers) != 0:
+        key, value = header.split(":", 1)
+        custom_header[key.strip()] = value.strip()
+    else:
+        headers = {"User-Agent": "WEBPOK"}
+
+    if len(testvalue) != 0:
+        testvalue = testvalue
+    else:
+        testvalue = "test_value"
+
+    method = "GET"
+    calibraton_length = calibraton(url, headers, method)
+
+    print(f"{Fore.MAGENTA}\tBase URL >>> {url}")
+    print(f"{Fore.MAGENTA}\tWordlist >>> {wordlist}")
+    print(f"{Fore.MAGENTA}\tMaximum paralel requests >>> {max_req_num}")
+    print(f"{Fore.MAGENTA}\tHeaders >>> {headers}")
+    print(f"{Fore.MAGENTA}\tTimeout >>> {timeout}s")
+    print(f"{Fore.MAGENTA}\tTest value >>> {testvalue}")
+    print(f"{Fore.MAGENTA}\tMethod >>> {method}")
+    print(f"{Fore.MAGENTA}\tCalibration length >>> {calibraton_length}\n")
+
+    with open(wordlist, 'r') as file:
+        wordlist = [line.strip() for line in file.readlines()]
+    
+    start_time = time.time()
+    responses = asyncio.run(param_get_bruteforce(url, wordlist, max_req_num, headers, timeout, testvalue))
+    end_time = time.time()
+
+    for response, status in responses:
+        if len(response) != calibraton_length and status != 404:
+            print(f'Status: {status}, Response Length: {len(response)}')
+    
+    print(f'Time taken: {end_time - start_time} seconds')
+
+    input("Awaiting to return to main menu...")
+
+def find_hidden_fields(urls, headers):
+    """
+    Function used to find hidden fields in HTML source code
+    urls: urls to check
+    headers: custom headers to use(if any)
+    """
+    if len(headers) != 0:
+        key, value = header.split(":", 1)
+        custom_header[key.strip()] = value.strip()
+    else:
+        headers = {"User-Agent": "WEBPOK"}
+    
+    for url in urls:
+        response = r.get(url, headers=headers, verify=False)
+        # Parse the HTML
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Find all hidden input fields
+        hidden_inputs = soup.find_all('input', {'type': 'hidden'})
+
+        # Extract name and value attributes
+        hidden_params = {input_tag['name']: input_tag['value'] for input_tag in hidden_inputs}
+
+        # Display the hidden parameters
+        print("Hidden Parameters; FORMAT >>> param_name: param_value")
+        for name, value in hidden_params.items():
+            print(f"{name}: {value}")
+
+        input("\nAwaiting to continue to main menu...")
 
 async def second_counter(timer_bar):
     """
@@ -38,7 +181,60 @@ async def second_counter(timer_bar):
             timer_bar.success()
             return
 
-async def fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q, progress_bar, progress1):
+def match_check(response, match):
+    """
+    REMEMBER THAT A -1 ON match MEANS TO SKIP THAT PATTERN
+    Function used to check matching patterns
+    input: response object
+    returns: bool; True means a match has been found and False a match hasn't been found
+    """
+    if match["size"] != -1:
+        if response.status == match["status_code"] and response.headers.get("Content-Length") == match["size"]:
+            return True
+        else:
+            return False
+    
+    if response.status == match["status_code"]:
+        return True
+    else:
+        return False
+
+def filter_check(response, filtering):
+    """
+    REMEMBER THAT A -1 ON filtering MEANS TO SKIP THAT PATTERN
+    Function used to check filtering patterns
+    input: response object
+    returns: bool; True means a filter has been found and False a filter hasn't been found
+    """
+    if filtering["size"] != -1:
+        if filtering["status_code"] != -1:
+            #status and length check
+            if response.headers.get("Content-Length") == filtering["size"] and response.status == filtering["status_code"]:
+                return True
+            else:
+                return False
+        else:
+            #only length check
+            if response.headers.get("Content-Length") == filtering["size"]:
+                return True
+            else:
+                return False
+    
+    if filtering["status_code"] != -1:
+        if filtering["size"] != -1:
+            #status and length check
+            if response.headers.get("Content-Length") == filtering["size"] and response.status == filtering["status_code"]:
+                return True
+            else:
+                return False
+        else:
+            #only status check
+            if response.status == filtering["status_code"]:
+                return True
+            else:
+                return False
+
+async def fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q, progress_bar, progress1, match, filtering):
     """
     Asynchronous function to fetch data from a URL
     url: url to fetch
@@ -48,6 +244,8 @@ async def fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q
     visited_urls: set used to avoid visiting the same url twice
     valid_urls: update with full urls
     q: list to update with relative paths if 200 is found
+    match: matching patterns
+    filtering: filter patterns
     """
     global rec_stop_event
     if rec_stop_event.is_set():
@@ -64,8 +262,8 @@ async def fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q
                         rps = 1 / elapsed_time
                         progress_bar.status(f"Total Perfomed requests: {progress1} | RPS: {rps:.2f}")
                         #print(f"Fetching {url} - Status: {response.status}")
-                        if response.status == 200:
-                            print(f"{Fore.GREEN}Valid url: {url}")
+                        if match_check(response, match) and not filter_check(response, filtering):
+                            print(f"{Fore.GREEN}URL: {url} [Status: {response.status} | Size: {response.headers.get("Content-Length")}]")
                             parsed_url = urlparse(url)
                             #check to ensure we only store directories into the queue
                             if '/' not in parsed_url.path[-1]: 
@@ -80,16 +278,16 @@ async def fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q
                         return
                 except asyncio.TimeoutError:
                     print(f"{Fore.RED}Request to {url} timed out!")
-                    sys.exit(1)
+                    return
                 except Exception as e:
                     print(f"{Fore.RED}An error occurred:")
                     traceback.print_exc()
-                    sys.exit(1)
+                    return
     else:
         return
 
 
-async def run_async_requests(urls, max_req_num, semaphore, mydict, session, q, progress_bar, progress1):
+async def run_async_requests(urls, max_req_num, semaphore, mydict, session, q, progress_bar, progress1, match, filtering):
     """
     Function to run the async tasks
     urls: urls to try asyncrhonously
@@ -99,16 +297,18 @@ async def run_async_requests(urls, max_req_num, semaphore, mydict, session, q, p
     progress_bar: used to keep track of the progess
     session: session object created by each captain
     q: list to update if 200 is found
+    match: matching patterns
+    filtering: filter patterns
     """
     global visited_urls
     global valid_urls
     global stop_event
 
-    tasks = [fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q, progress_bar, progress1) for url in urls]
+    tasks = [fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q, progress_bar, progress1, match, filtering) for url in urls]
     results = await asyncio.gather(*tasks)
     return results
 
-async def captain_worker(base_url, lines, extensions, max_req_num, semaphore, timeout, q, progress_bar, captain_num):
+async def captain_worker(base_url, lines, extensions, max_req_num, semaphore, timeout, q, progress_bar, captain_num, match, filtering):
     """
     Asynchronous function responsible for organizing the run_async_requests function workload, each captain
     is responsible for its progress bar
@@ -122,6 +322,8 @@ async def captain_worker(base_url, lines, extensions, max_req_num, semaphore, ti
     q: list used to keep track of the results
     progress_bar: used to display progress and RPS rate
     captain_num: used for prettier debugging
+    match: matching patterns
+    filtering: filtering patterns
     """
     global rec_stop_event # we can acess stop_event
     global thread_num # we can access thread_num
@@ -176,7 +378,7 @@ async def captain_worker(base_url, lines, extensions, max_req_num, semaphore, ti
                 else:
                     continue
             start_time = time.time()
-            results = await run_async_requests(urls_to_try, max_req_num, semaphore, mydict, session, q, progress_bar, progress1)
+            results = await run_async_requests(urls_to_try, max_req_num, semaphore, mydict, session, q, progress_bar, progress1, match, filtering)
             end_time = time.time()
             elapsed_time = end_time - start_time
             if elapsed_time > 0 and total_requests > 0:
@@ -206,7 +408,7 @@ async def captain_worker(base_url, lines, extensions, max_req_num, semaphore, ti
     progress_bar.success()
     return
 
-def rec_fuzz(base_url, wordlist, extensions, max_req_num, timeout, headers, thread_num):
+def rec_fuzz(base_url, wordlist, extensions, max_req_num, timeout, headers, thread_num, match, filtering):
     #Setting up global vars
     base_url = base_url.rstrip("/")
     if len(headers) != 0:
@@ -238,7 +440,10 @@ def rec_fuzz(base_url, wordlist, extensions, max_req_num, timeout, headers, thre
     print(f"{Fore.MAGENTA}\tWordlist >>> {wordlist}")
     print(f"{Fore.MAGENTA}\tCaptains number >>> {thread_num}")
     print(f"{Fore.MAGENTA}\tMax paralel requests >>> {max_req_num}")
-    print(f"{Fore.MAGENTA}\tHeaders >>> {headers}\n")    
+    print(f"{Fore.MAGENTA}\tTimeout >>> {timeout}s")
+    print(f"{Fore.MAGENTA}\tHeaders >>> {headers}")
+    print(f"{Fore.MAGENTA}\tMatcher >>> {match}") 
+    print(f"{Fore.MAGENTA}\tFilter >>> {filtering}\n")     
     print(f"{Fore.MAGENTA}All the captain workers started, waiting for the results...")
 
     # Add the second counter as a background task
@@ -251,7 +456,7 @@ def rec_fuzz(base_url, wordlist, extensions, max_req_num, timeout, headers, thre
         #Submit tasks
         captain_num = captain
         lines_for_captain = chunks[index]
-        task = loop.create_task(captain_worker(base_url, lines_for_captain, extensions, max_req_num, semaphore, timeout, q, progress_bar, captain_num))
+        task = loop.create_task(captain_worker(base_url, lines_for_captain, extensions, max_req_num, semaphore, timeout, q, progress_bar, captain_num, match, filtering))
         tasks.append(task)
         index += 1
 
@@ -263,6 +468,8 @@ def rec_fuzz(base_url, wordlist, extensions, max_req_num, timeout, headers, thre
         rec_timer_event.set()  # Signal to stop the timer
         loop.run_until_complete(timer_task)  # Ensure timer task finishes
         loop.close()
+
+    input("Awaiting to return to main menu...")
 
 def gau(host):
     with_subs = False
