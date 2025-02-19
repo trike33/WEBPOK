@@ -522,7 +522,7 @@ if __name__ == '__main__':
 			print(banner)
 			print(f"{Fore.RED}\n┌" + "─" * 91 + "┐")
 			print(f"{Style.BRIGHT}| 1. Extension and keywords check on URLs"+" "*(90-41+2)+"|")
-			print(f"{Style.BRIGHT}| 2. Find guessable parameters in URLs(numeric)"+" "*(90-38+2)+"|")
+			print(f"{Style.BRIGHT}| 2. Find guessable parameters in URLs(numeric)"+" "*(90-47+2)+"|")
 			print(f"{Style.BRIGHT}| 3. Parse a Burp-comptabile JSON scope file"+" "*(90-44+2)+"|")
 			print(f"{Style.BRIGHT}| 4. Go back"+" "*(90-12+2)+"|")
 			print(f"{Fore.RED}└" + "─" * 91 + "┘"+"\n")
