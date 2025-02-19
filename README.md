@@ -1,6 +1,6 @@
 # 🌐 WEBPOK
 
-WEBPOK is a tool designed to gather as much URLs as possible from a website. To accomplish this, it combines a variety of techniques such as crawling and directory bruteforcing. Each of them(crawling and directory bruteforcing) has been designed to offer a unique perpesctive in comparison with other available tools while maintaining utility.
+WEBPOK is a tool designed to gather as much URLs as possible from a website. To accomplish this, it combines a variety of techniques such as crawling and directory bruteforcing. Each of them(crawling and directory bruteforcing) has been designed to offer a unique perpesctive in comparison with other available tools while maintaining utility. Hope you enjoy it!
 
 ![](https://github.com/trike33/WEBPOK/blob/main/repo_images/main.png)
 
