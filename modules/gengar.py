@@ -263,7 +263,7 @@ async def fetch_url(url, session, semaphore, mydict, visited_urls, valid_urls, q
                         progress_bar.status(f"Total Perfomed requests: {progress1} | RPS: {rps:.2f}")
                         #print(f"Fetching {url} - Status: {response.status}")
                         if match_check(response, match) and not filter_check(response, filtering):
-                            print(f"{Fore.GREEN}URL: {url} [Status: {response.status} | Size: {response.headers.get("Content-Length")}]")
+                            print(f"{Fore.GREEN}URL: {url} [Status: {response.status} | Size: {response.headers.get('Content-Length')}]")
                             parsed_url = urlparse(url)
                             #check to ensure we only store directories into the queue
                             if '/' not in parsed_url.path[-1]: 
