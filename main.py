@@ -230,7 +230,8 @@ if __name__ == '__main__':
 						traceback.print_exc()
 					
 					results = parse_robots_url(url, thread_num, results)
-					unique_urls.add(results)
+					for result in results:
+						unique_urls.add(result)
 					print(f"{Fore.GREEN}Found {len(results)} valid URLs!")
 					print(f"{Fore.RED}No more robots/sitemap files found")
 					print(f"{Fore.GREEN} URLs sucessfully saved!")
