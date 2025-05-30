@@ -222,7 +222,7 @@ if __name__ == '__main__':
 				input2 = input("Please enter the robots/sitemap URL or filename(with robots/sitemap URLs): ")
 				if '://' not in input2:
 					try:
-						with open(inputfile, 'r') as file:
+						with open(input2, 'r') as file:
 							urls = file.readlines()
 							for url in urls:
 								url = url.rstrip()
