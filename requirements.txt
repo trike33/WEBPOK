@@ -4,3 +4,4 @@ pwn
 aiohttp
 Pillow
 BeautifulSoup4
+argparse
