@@ -1,0 +1,6 @@
+colorama
+tabulate
+pwn
+aiohttp
+Pillow
+BeautifulSoup4
